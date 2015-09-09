@@ -20,10 +20,10 @@ LOG = logging.getLogger(__name__)
 class HeatServiceInstance(ContrailResource):
     PROPERTIES = (
         NAME, SERVICE_TEMPLATE, AUTO_POLICY, AVAILABILITY_ZONE,
-        INTERFACE_LIST, SCALE_OUT, HA_MODE
+        INTERFACE_LIST, SCALE_OUT, HA_MODE, VIRTUAL_MACHINES
     ) = (
         'name', 'service_template', 'auto_policy', 'availability_zone',
-        'interface_list', 'scale_out', 'ha_mode'
+        'interface_list', 'scale_out', 'ha_mode', 'virtual_machines'
     )
 
     _INTERFACE_LIST_KEYS = (
@@ -66,6 +66,11 @@ class HeatServiceInstance(ContrailResource):
         AVAILABILITY_ZONE: properties.Schema(
             properties.Schema.STRING,
             _('Availability Zone.'),
+            update_allowed=False
+        ),
+        VIRTUAL_MACHINES: properties.Schema(
+            properties.Schema.LIST,
+            _('Virtual machines list.'),
             update_allowed=False
         ),
         INTERFACE_LIST: properties.Schema(
@@ -168,6 +173,8 @@ class HeatServiceInstance(ContrailResource):
         if len(svc_tmpl_if_list) != len(svc_inst_if_list):
             raise vnc_api.BadRequest
 
+        vn_to_type_map = {}
+
         if_index = 0
         si_prop = vnc_api.ServiceInstanceType()
         for intf in self.properties[self.INTERFACE_LIST]:
@@ -187,7 +194,7 @@ class HeatServiceInstance(ContrailResource):
                 routes_list['route'] = intf[self.STATIC_ROUTES]
 
             if_type = vnc_api.ServiceInstanceInterfaceType(
-                virtual_network=vn_name,static_routes=routes_list or None)
+                virtual_network=vn_name, static_routes=routes_list or None)
             si_prop.add_interface_list(if_type)
 
             #NOTE: required on 2.10 & 2.20, otherwise leaking fails
@@ -200,6 +207,9 @@ class HeatServiceInstance(ContrailResource):
             elif svc_tmpl_if_list[if_index].get_service_interface_type(
                    ) == 'right':
                 si_prop.set_right_virtual_network(vn_name)
+
+            if_type = svc_tmpl_if_list[if_index].get_service_interface_type()
+            vn_to_type_map[vn_name] = if_type
 
             if_index = if_index + 1
 
@@ -220,6 +230,9 @@ class HeatServiceInstance(ContrailResource):
 
         st_obj = self.vnc_lib().service_template_read(id=st_obj.uuid)
         si_obj.set_service_template(st_obj)
+
+        for vm_uuid in self.properties[self.VIRTUAL_MACHINES] or []:
+            self.update_service_vm(vm_uuid, si_obj, vn_to_type_map)
 
         si_uuid = self.vnc_lib().service_instance_create(si_obj)
         self.resource_id_set(si_uuid)
@@ -244,6 +257,32 @@ class HeatServiceInstance(ContrailResource):
             return True
         else:
             return False
+
+    def get_vn_name(self, vmi_obj):
+        vn_refs = vmi_obj.get_virtual_network_refs()
+        return ':'.join(vn_refs[0]['to'])
+
+    def set_vmi_service_interface_type(self, vmi_uuid, vn_to_type_map):
+        vmi_obj = self.vnc_lib().virtual_machine_interface_read(id=vmi_uuid)
+
+        vmi_props = vmi_obj.get_virtual_machine_interface_properties()
+        if not vmi_props:
+            vmi_props = vnc_api.VirtualMachineInterfacePropertiesType()
+
+        vn_name = self.get_vn_name(vmi_obj)
+        vmi_type = vn_to_type_map[vn_name]
+
+        vmi_props.set_service_interface_type(vmi_type)
+        vmi_obj.set_virtual_machine_interface_properties(vmi_props)
+        self.vnc_lib().virtual_machine_interface_update(vmi_obj)
+
+    def update_service_vm(self, vm_uuid, si_obj, vn_to_type_map):
+        vm_obj = self.vnc_lib().virtual_machine_read(id=vm_uuid)
+        for vmi_ref in vm_obj.get_virtual_machine_interface_back_refs():
+            self.set_vmi_service_interface_type(vmi_ref['uuid'], vn_to_type_map)
+
+        vm_obj.set_service_instance(si_obj)
+        self.vnc_lib().virtual_machine_update(vm_obj)
 
     def handle_update(self, json_snippet, tmpl_diff, prop_diff):
         try:
