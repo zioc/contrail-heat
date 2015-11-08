@@ -202,6 +202,11 @@ class HeatServiceInstance(ContrailResource):
         si_prop.set_scale_out(scale_out)
 
         si_prop.set_availability_zone(self.properties[self.AVAILABILITY_ZONE])
+        #NOTE: required on 2.10 & 2.20, otherwise leaking fails
+        #TODO: retrieve service template and set networks accordingly
+        #si_prop.set_management_virtual_network("")
+        #si_prop.set_left_virtual_network("")
+        #si_prop.set_right_virtual_network("")
 
         si_prop.set_ha_mode(self.properties[self.HA_MODE])
         si_obj.set_service_instance_properties(si_prop)
@@ -211,6 +216,8 @@ class HeatServiceInstance(ContrailResource):
 
         si_uuid = self.vnc_lib().service_instance_create(si_obj)
         self.resource_id_set(si_uuid)
+
+    #def check_create_complete(self, resources):
 
     def handle_update(self, json_snippet, tmpl_diff, prop_diff):
         try:
@@ -273,27 +280,52 @@ class HeatServiceInstance(ContrailResource):
                 break
 
     def handle_delete(self):
+        res = {}
+        LOG.debug("XXXXX Deleting svc inst %s" % self.resource_id)
         try:
             # get the servers list
             si_obj = self.vnc_lib().service_instance_read(id=self.resource_id)
-            vm_uuid_list = list(si_obj.get_virtual_machine_back_refs() or [])
+            for vm in list(si_obj.get_virtual_machine_back_refs() or []):
+                #LOG.debug("XXXXX VM: %s" % vm)
+                res[vm['uuid']]=[]
+                vm_obj = self.vnc_lib().virtual_machine_read(id=vm['uuid'])
+                for vmi in list(
+                    vm_obj.get_virtual_machine_interface_back_refs() or []):
+                    res[vm['uuid']].append(vmi['uuid'])
 
             self.vnc_lib().service_instance_delete(id=self.resource_id)
 
-            for vm_uuid in vm_uuid_list or []:
-                try:
-                    vm = self.nova().servers.get(vm_uuid['to'][0])
-                except nova_exceptions.NotFound:
-                    pass
-                else:
-                    delete = scheduler.TaskRunner(self.delete_vm, vm)
-                    delete(wait_time=1.0)
-
         except vnc_api.NoIdError:
             LOG.warn(_("Service Instance %s not found.") % self.name)
-        except:
-            LOG.warn(_("Unknown error."))
-            raise
+        except Exception as e:
+             LOG.warn(e)
+        #except:
+        #    LOG.warn(_("Unknown error."))
+        #    raise
+        return res
+
+    def check_delete_complete(self, resources):
+        LOG.debug("XXXXXXXXXXXXXXX %s" % resources)
+        for vm in resources.keys():
+            try:
+                self.nova().servers.get(vm)
+            except nova_exceptions.NotFound:
+                #Check if there are vmis to cleanup
+                for vmi in resources[vm]:
+                    try:
+                        self.vnc_lib().virtual_machine_interface_delete(id=vmi)
+                        LOG.info("Deleted VM interface %s on behalf of schema",
+                                 vmi)
+                    except vnc_api.NoIdError:
+                        LOG.debug("VM %s Interface %s was already deleted" %
+                                  (vm, vmi))
+                    except Exception as e:
+                        LOG.warn(e)
+                continue
+            #There is still a running service vm, wait for delete to complete
+            return False
+        return True
+
 
     def _show_resource(self):
         si_obj = self.vnc_lib().service_instance_read(id=self.resource_id)
