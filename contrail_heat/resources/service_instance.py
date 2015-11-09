@@ -190,6 +190,7 @@ class HeatServiceInstance(ContrailResource):
                 virtual_network=vn_name,static_routes=routes_list or None)
             si_prop.add_interface_list(if_type)
 
+            #NOTE: required on 2.10 & 2.20, otherwise leaking fails
             if svc_tmpl_if_list[if_index].get_service_interface_type(
                     ) == 'management':
                 si_prop.set_management_virtual_network(vn_name)
@@ -213,11 +214,6 @@ class HeatServiceInstance(ContrailResource):
         si_prop.set_scale_out(scale_out)
 
         si_prop.set_availability_zone(self.properties[self.AVAILABILITY_ZONE])
-        #NOTE: required on 2.10 & 2.20, otherwise leaking fails
-        #TODO: retrieve service template and set networks accordingly
-        #si_prop.set_management_virtual_network("")
-        #si_prop.set_left_virtual_network("")
-        #si_prop.set_right_virtual_network("")
 
         si_prop.set_ha_mode(self.properties[self.HA_MODE])
         si_obj.set_service_instance_properties(si_prop)
@@ -228,7 +224,26 @@ class HeatServiceInstance(ContrailResource):
         si_uuid = self.vnc_lib().service_instance_create(si_obj)
         self.resource_id_set(si_uuid)
 
-    #def check_create_complete(self, resources):
+    def check_create_complete(self, si_uuid):
+        si_obj = self.vnc_lib().service_instance_read(id=self.resource_id)
+        active_count = 0
+        if self.properties[self.SCALE_OUT] is None:
+            num_instances = 1
+        else:
+            num_instances = self.properties[self.SCALE_OUT][self.MAX_INSTANCES]
+
+        for vms in si_obj.get_virtual_machine_back_refs() or []:
+            try:
+                vm = self.nova().servers.get(vms['to'][0])
+            except nova_exceptions.NotFound:
+                return False
+            if vm.status == 'ACTIVE':
+                active_count += 1
+        LOG.info("%s of %s VMs are active" % (active_count, num_instances))
+        if active_count == num_instances:
+            return True
+        else:
+            return False
 
     def handle_update(self, json_snippet, tmpl_diff, prop_diff):
         try:
