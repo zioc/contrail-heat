@@ -189,6 +189,17 @@ class HeatServiceInstance(ContrailResource):
             if_type = vnc_api.ServiceInstanceInterfaceType(
                 virtual_network=vn_name,static_routes=routes_list or None)
             si_prop.add_interface_list(if_type)
+
+            if svc_tmpl_if_list[if_index].get_service_interface_type(
+                    ) == 'management':
+                si_prop.set_management_virtual_network(vn_name)
+            elif svc_tmpl_if_list[if_index].get_service_interface_type(
+                   ) == 'left':
+                si_prop.set_left_virtual_network(vn_name)
+            elif svc_tmpl_if_list[if_index].get_service_interface_type(
+                   ) == 'right':
+                si_prop.set_right_virtual_network(vn_name)
+
             if_index = if_index + 1
 
         if self.properties[self.SCALE_OUT] is None:
