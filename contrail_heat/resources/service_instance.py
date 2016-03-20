@@ -2,6 +2,7 @@ try:
     from heat.common.i18n import _
 except ImportError:
     pass
+from heat.engine import attributes
 from heat.engine import constraints
 from novaclient import exceptions as nova_exceptions
 from heat.engine import properties
@@ -24,6 +25,14 @@ class HeatServiceInstance(ContrailResource):
     ) = (
         'name', 'service_template', 'auto_policy', 'availability_zone',
         'interface_list', 'scale_out', 'ha_mode'
+    )
+
+    ATTRIBUTES = (
+        NAME_ATTR, FQ_NAME, STATUS, SERVICE_TEMPLATE_ATTR, VIRTUAL_MACHINES,
+        ACTIVE_SERVICE_VMS, TENANT_ID
+    ) = (
+        'name', 'fq_name', 'status', 'service_template', 'virtual_machines',
+        'active_service_vms', 'tenant_id'
     )
 
     _INTERFACE_LIST_KEYS = (
@@ -169,15 +178,34 @@ class HeatServiceInstance(ContrailResource):
     }
 
     attributes_schema = {
-        "name": _("The name of the Service Instance."),
-        "fq_name": _("The FQ name of the Service Instance."),
-        "status": _("Status of the Service Instance."),
-        "service_template": _("Service Template of the Service Instance."),
-        "virtual_machines": _("Service VMs for the Service Instance."),
-        "active_service_vms": _("Number of service VMs active for this "
-                                "Service Instance."),
-        "tenant_id": _("Tenant id of the Service Instance."),
-        "show": _("All attributes."),
+        NAME_ATTR: attributes.Schema(
+            _("The name of the Service Instance."),
+            type=attributes.Schema.STRING
+        ),
+        FQ_NAME: attributes.Schema(
+            _("The FQ name of the Service Instance."),
+            type=attributes.Schema.STRING
+        ),
+        STATUS: attributes.Schema(
+            _("Status of the Service Instance."),
+            type=attributes.Schema.STRING
+        ),
+        SERVICE_TEMPLATE_ATTR: attributes.Schema(
+            _("Service Template of the Service Instance."),
+            type=attributes.Schema.STRING
+        ),
+        VIRTUAL_MACHINES: attributes.Schema(
+            _("Service VMs for the Service Instance."),
+            type=attributes.Schema.LIST
+        ),
+        ACTIVE_SERVICE_VMS: attributes.Schema(
+            _("Number of service VMs active for this Service Instance."),
+            type=attributes.Schema.STRING
+        ),
+        TENANT_ID: attributes.Schema(
+            _("Tenant id of the Service Instance."),
+            type=attributes.Schema.STRING
+        ),
     }
 
     update_allowed_keys = ('Properties',)

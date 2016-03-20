@@ -2,6 +2,7 @@ try:
     from heat.common.i18n import _
 except ImportError:
     pass
+from heat.engine import attributes
 from heat.engine import constraints
 from novaclient import exceptions as nova_exceptions
 from heat.engine import properties
@@ -22,6 +23,11 @@ class HeatPortTuple(ContrailResource):
         NAME, SERVICE_INSTANCE, PORTS
     ) = (
         'name', 'service_instance', 'ports'
+    )
+    ATTRIBUTES = (
+        NAME_ATTR, FQ_NAME, SERVICE_INSTANCE_ATTR, PORTS_ATTR, TENANT_ID,
+    ) = (
+        'name', 'fq_name', 'service_instance', 'ports', 'tenant_id',
     )
 
     properties_schema = {
@@ -46,12 +52,26 @@ class HeatPortTuple(ContrailResource):
     }
 
     attributes_schema = {
-        "name": _("The name of the Port Tuple."),
-        "fq_name": _("The FQ name of the Port Tuple."),
-        "service_instance": _("Service Instance for the Port Tuple."),
-        "ports": _("Service interfaces for the Port Tuple."),
-        "tenant_id": _("Tenant id of the Service Instance."),
-        "show": _("All attributes."),
+        NAME_ATTR: attributes.Schema(
+            _("The name of the Port Tuple."),
+            type=attributes.Schema.STRING
+        ),
+        FQ_NAME: attributes.Schema(
+            _("The FQ name of the Port Tuple."),
+            type=attributes.Schema.STRING
+        ),
+        SERVICE_INSTANCE_ATTR: attributes.Schema(
+            _("Service Instance for the Port Tuple."),
+            type=attributes.Schema.STRING
+        ),
+        PORTS_ATTR: attributes.Schema(
+            _("Service interfaces for the Port Tuple."),
+            type=attributes.Schema.LIST
+        ),
+        TENANT_ID: attributes.Schema(
+            _("Tenant id of the Service Instance."),
+            type=attributes.Schema.STRING
+        ),
     }
 
     update_allowed_keys = ('Properties',)

@@ -2,6 +2,7 @@ try:
     from heat.common.i18n import _
 except ImportError:
     pass
+from heat.engine import attributes
 from heat.engine import properties
 from heat.engine import constraints
 from vnc_api import vnc_api
@@ -15,6 +16,14 @@ class HeatVirtualMachineInterface(contrail.ContrailResource):
         PORT_TUPLES, SERVICE_INTERFACE_TYPE
     ) = (
         'name', 'virtual_machine_interface_mac_addresses', 'virtual_networks',
+        'port_tuples', 'service_interface_type'
+    )
+
+    ATTRIBUTES = (
+        NAME_ATTR, FQ_NAME_ATTR, VIRTUAL_MACHINE_INTEFRACE_MAC_ADDRESSES_ATTR,
+        VIRTUAL_NETWORKS_ATTR, PORT_TUPLES_ATTR, SERVICE_INTERFACE_TYPE_ATTR
+    ) = (
+        'name', 'fq_name', 'virtual_machine_interface_mac_addresses', 'virtual_networks',
         'port_tuples', 'service_interface_type'
     )
 
@@ -51,13 +60,30 @@ class HeatVirtualMachineInterface(contrail.ContrailResource):
     }
 
     attributes_schema = {
-        "name": _("The name of the Virtual Network."),
-        "fq_name": _("The FQ name of the Virtual Network."),
-        "service_interface_type": _("Service interface type."),
-        "virtual_machine_interface_mac_addresses": _("List of mac addresses."),
-        "virtual_networks": _("List of virtual networks FQ names."),
-        "port_tuples": _("List of port tuple FQ names."),
-        "show": _("All attributes."),
+        NAME_ATTR: attributes.Schema(
+            _("The name of the Virtual Network."),
+            type=attributes.Schema.STRING
+        ),
+        FQ_NAME_ATTR: attributes.Schema(
+            _("The FQ name of the Virtual Network."),
+            type=attributes.Schema.STRING
+        ),
+        VIRTUAL_MACHINE_INTEFRACE_MAC_ADDRESSES_ATTR: attributes.Schema(
+            _("List of mac addresses."),
+            type=attributes.Schema.LIST
+        ),
+        VIRTUAL_NETWORKS_ATTR: attributes.Schema(
+            _("List of virtual networks FQ names."),
+            type=attributes.Schema.LIST
+        ),
+        PORT_TUPLES_ATTR: attributes.Schema(
+            _("List of port tuple FQ names."),
+            type=attributes.Schema.LIST
+        ),
+        SERVICE_INTERFACE_TYPE_ATTR: attributes.Schema(
+            _("Service interface type."),
+            type=attributes.Schema.STRING
+        ),
     }
 
     def _get_iip_name(self, pt_obj, vmi_obj, iip_family):
@@ -112,7 +138,7 @@ class HeatVirtualMachineInterface(contrail.ContrailResource):
         vmi_props = vnc_api.VirtualMachineInterfacePropertiesType()
         vmi_props.set_service_interface_type(self.properties[self.SERVICE_INTERFACE_TYPE])
         vmi_obj.set_virtual_machine_interface_properties(vmi_props)
-        vmi_uuid = super(HeatVirtualMachineInterface, self).resource_create(vmi_obj) 
+        vmi_uuid = super(HeatVirtualMachineInterface, self).resource_create(vmi_obj)
 
         iip_obj = self._allocate_iip_for_family(vn_obj, pt_obj, vmi_obj, 'v4')
         iip_obj.add_virtual_machine_interface(vmi_obj)

@@ -2,6 +2,7 @@ try:
     from heat.common.i18n import _
 except ImportError:
     pass
+from heat.engine import attributes
 from heat.engine import constraints
 from heat.engine import properties
 try:
@@ -26,6 +27,12 @@ class HeatServiceTemplate(ContrailResource):
         'static_routes_list', 'flavor', 'ordered_interfaces',
         'service_virtualization_type', 'availability_zone_enable',
         'service_version'
+    )
+
+    ATTRIBUTES = (
+        NAME_ATTR, FQ_NAME, SERVICE_INSTANCES,
+    ) = (
+        'name', 'fq_name', 'service_instances',
     )
 
     _INTERFACE_KEYS = (
@@ -151,11 +158,18 @@ class HeatServiceTemplate(ContrailResource):
     }
 
     attributes_schema = {
-        "name": _("The name of the Service Template."),
-        "fq_name": _("The FQ name of the Service Template."),
-        "service_instances": _("Service Instances launched with this service "
-                               "template."),
-        "show": _("All attributes."),
+        NAME_ATTR: attributes.Schema(
+            _("The name of the Service Template."),
+            type=attributes.Schema.STRING
+        ),
+        FQ_NAME: attributes.Schema(
+            _("The name of the Service Template."),
+            type=attributes.Schema.STRING
+        ),
+        SERVICE_INSTANCES: attributes.Schema(
+            _("Service Instances launched with this service template."),
+            type=attributes.Schema.LIST
+        ),
     }
 
     update_allowed_keys = ('Properties',)

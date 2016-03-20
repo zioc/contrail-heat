@@ -5,6 +5,7 @@ try:
     from heat.common.i18n import _
 except ImportError:
     pass
+from heat.engine import attributes
 from heat.engine import constraints
 from heat.engine import properties
 try:
@@ -23,6 +24,15 @@ class ContrailVirtualNetwork(contrail.ContrailResource):
     ) = (
         'name', 'route_targets', 'shared', 'external', 'allow_transit',
         'forwarding_mode', 'flood_unknown_unicast'
+    )
+
+    ATTRIBUTES = (
+        NAME_ATTR, FQ_NAME_ATTR, ROUTE_TARGETS_ATTR, SHARED_ATTR,
+        EXTERNAL_ATTR, ALLOW_TRANSIT_ATTR, FORWARDING_MODE_ATTR,
+        FLOOD_UNKNOWN_UNICAST_ATTR
+    ) = (
+        'name', 'fq_name', 'route_targets', 'shared', 'external',
+        'allow_transit', 'forwarding_mode', 'flood_unknown_unicast'
     )
 
     properties_schema = {
@@ -86,15 +96,38 @@ class ContrailVirtualNetwork(contrail.ContrailResource):
         ),
     }
     attributes_schema = {
-        "name": _("The name of the Virtual Network."),
-        "fq_name": _("The FQ name of the Virtual Network."),
-        "route_targets": _("Route Targets list."),
-        "shared": _("shared across all tenants."),
-        "external": _("external."),
-        "allow_transit": _("allow_transit."),
-        "forwarding_mode": _("forwarding_mode."),
-        "flood_unknown_unicast":_("L2 packets flooded to all ports on network."),
-        "show": _("All attributes."),
+        NAME_ATTR: attributes.Schema(
+            _("The name of the Virtual Network."),
+            type=attributes.Schema.STRING
+        ),
+        FQ_NAME_ATTR: attributes.Schema(
+            _("The FQ name of the Virtual Network."),
+            type=attributes.Schema.STRING
+        ),
+        ROUTE_TARGETS_ATTR: attributes.Schema(
+            _("Route Targets list."),
+            type=attributes.Schema.STRING
+        ),
+        SHARED_ATTR: attributes.Schema(
+            _("Shared across all tenants."),
+            type=attributes.Schema.STRING
+        ),
+        EXTERNAL_ATTR: attributes.Schema(
+            _("external."),
+            type=attributes.Schema.STRING
+        ),
+        ALLOW_TRANSIT_ATTR: attributes.Schema(
+            _("allow_transit."),
+            type=attributes.Schema.STRING
+        ),
+        FORWARDING_MODE_ATTR: attributes.Schema(
+            _("forwarding_mode."),
+            type=attributes.Schema.STRING
+        ),
+        FLOOD_UNKNOWN_UNICAST_ATTR: attributes.Schema(
+            _("L2 packets flooded to all ports on network."),
+            type=attributes.Schema.STRING
+        )
     }
 
     update_allowed_keys = ('Properties',)
@@ -163,7 +196,7 @@ class ContrailVirtualNetwork(contrail.ContrailResource):
         if rt_list:
             vn_obj.set_route_target_list(vnc_api.RouteTargetList(
                 ["target:" + route for route in rt_list]))
- 
+
         if prop_diff.get(self.FLOOD_UNKNOWN_UNICAST) == "True":
             vn_obj.set_flood_unknown_unicast(True)
         else:

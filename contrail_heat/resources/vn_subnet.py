@@ -2,6 +2,7 @@ try:
     from heat.common.i18n import _
 except ImportError:
     pass
+from heat.engine import attributes
 from heat.engine import constraints
 from heat.engine import properties
 from vnc_api import vnc_api
@@ -21,6 +22,13 @@ class HeatVnSubnet(contrail.ContrailResource):
         'host_routes',
     )
 
+    ATTRIBUTES = (
+        NAME_ATTR, NETWORK_ATTR, IP_PREFIX_ATTR, DEFAULT_GATEWAY_ATTR,
+        IPAM_ATTR, ENABLE_DHCP_ATTR, SUBNET_UUID, SUBNET_NAME,
+    ) = (
+        'name', 'network', 'ip_prefix', 'default_gateway', 'ipam',
+        'enable_dhcp', 'subnet_uuid', 'subnet_name',
+    )
     _ALLOCATION_POOL_KEYS = (
         ALLOCATION_POOL_START, ALLOCATION_POOL_END,
     ) = (
@@ -116,16 +124,38 @@ class HeatVnSubnet(contrail.ContrailResource):
     }
 
     attributes_schema = {
-        "name": _("The name of the Virtual Network."),
-        "network": _("Network ID this subnet belongs to."),
-        "ip_prefix": _("IP prefix of subnet."),
-        "default_gateway": _("Default gateway of subnet."),
-        "ipam": _("IPAM this subnet uses."),
-        "subnet_uuid": _("UUID of subnet."),
-        "subnet_name": _("Name of subnet"),
-        "enable_dhcp": _("'True' if DHCP is enabled for this subnet; 'False' "
-                         "otherwise."),
-        "show": _("All attributes."),
+        NAME_ATTR: attributes.Schema(
+            _("The name of the Virtual Network."),
+            type=attributes.Schema.STRING
+        ),
+        NETWORK_ATTR: attributes.Schema(
+            _("Network ID this subnet belongs to."),
+            type=attributes.Schema.STRING
+        ),
+        IP_PREFIX_ATTR: attributes.Schema(
+            _("IP prefix of subnet."),
+            type=attributes.Schema.STRING
+        ),
+        DEFAULT_GATEWAY_ATTR: attributes.Schema(
+            _("Default gateway of subnet."),
+            type=attributes.Schema.STRING
+        ),
+        IPAM_ATTR: attributes.Schema(
+            _("IPAM this subnet uses."),
+            type=attributes.Schema.STRING
+        ),
+        ENABLE_DHCP_ATTR: attributes.Schema(
+            _("'True' if DHCP is enabled for this subnet; 'False' otherwise."),
+            type=attributes.Schema.STRING
+        ),
+        SUBNET_UUID: attributes.Schema(
+            _("UUID of subnet."),
+            type=attributes.Schema.STRING
+        ),
+        SUBNET_NAME: attributes.Schema(
+            _("Name of subnet"),
+            type=attributes.Schema.STRING
+        ),
     }
 
     update_allowed_keys = ('Properties',)

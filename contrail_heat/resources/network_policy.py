@@ -2,7 +2,7 @@ try:
     from heat.common.i18n import _
 except ImportError:
     pass
-
+from heat.engine import attributes
 from heat.engine import constraints
 from heat.engine import clients
 from heat.engine import properties
@@ -24,6 +24,12 @@ class NetworkPolicy(ContrailResource):
         NAME, ENTRIES,
     ) = (
         'name', 'entries',
+    )
+
+    ATRIBUTES = (
+        NAME_ATTR, FQ_NAME, TENANT_ID, RULES,
+    ) = (
+        'name', 'fq_name', 'tenant_id', 'rules',
     )
 
     _rule_schema = {
@@ -161,11 +167,22 @@ class NetworkPolicy(ContrailResource):
         )
     }
     attributes_schema = {
-        "name": _("The name of the policy."),
-        "fq_name": _("FQ name of this policy."),
-        "tenant_id": _("The tenant owning this network."),
-        "rules": _("List of rules"),
-        "show": _("All attributes."),
+        NAME_ATTR: attributes.Schema(
+            _("The name of the policy."),
+            type=attributes.Schema.STRING
+        ),
+        FQ_NAME: attributes.Schema(
+            _("FQ name of this policy."),
+            type=attributes.Schema.STRING
+        ),
+        TENANT_ID: attributes.Schema(
+            _("The tenant owning this network."),
+            type=attributes.Schema.STRING
+        ),
+        RULES: attributes.Schema(
+            _("List of rules"),
+            attributes.Schema.LIST
+        ),
     }
 
     def fix_apply_service(self, props):
@@ -227,7 +244,7 @@ class NetworkPolicy(ContrailResource):
                                        parent_obj=project_obj)
         np_obj.set_network_policy_entries(
             vnc_api.PolicyEntriesType.factory(**props['entries']))
-        np_uuid = super(NetworkPolicy, self).resource_create(np_obj) 
+        np_uuid = super(NetworkPolicy, self).resource_create(np_obj)
         self.resource_id_set(np_uuid)
 
     def handle_update(self, json_snippet, tmpl_diff, prop_diff):
